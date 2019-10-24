@@ -3,6 +3,9 @@ rg="Kubernetes-RG"
 location="westeurope"
 az group create --name $rg --location $location
 
+# Remove old aks service principal if exists
+ll .azure/aksServicePrincipal.json && rm .azure/aksServicePrincipal.json
+
 # Create Kubernetes Cluster
 name="akscluster1"
 size="Standard_DS1_v2"
