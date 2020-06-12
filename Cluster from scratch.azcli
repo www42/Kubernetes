@@ -1,0 +1,53 @@
+az login
+az account show
+
+az group list -o table
+az group create --location westeurope --name Kubernetes-RG 
+
+# Create Cluster in Portal
+
+# All you need is az aks
+az aks --help
+# There is an cli extension https://github.com/Azure/azure-cli-extensions/tree/master/src/aks-preview
+az extension list-available --query "[?name == 'aks-preview']"
+
+rg="Kubernetes-RG"
+cluster="Cluster42"
+az aks list -o table
+
+az aks show --name $cluster --resource-group $rg
+az aks get-credentials --name $cluster --resource-group $rg
+
+kubectl config view
+kubectl config get-contexts
+
+
+kubectl config use-context $cluster
+kubectl config use-context docker-desktop
+
+# delete context
+kubectl config delete-context CaptainKubi
+# delete cluster
+kubectl config delete-cluster CaptainKubi
+# delete user
+kubectl config unset users.clusterUser_Kubernetes-RG_CaptainKubi
+
+kubectl config use-context docker-desktop
+kubectl config use-context $cluster
+
+kubectl config current-context
+kubectl cluster-info
+az aks show --name $cluster --resource-group $rg > tmp/cluster42.json
+az aks show --name $cluster --resource-group $rg --query 'agentPoolProfiles[0].enableAutoScaling'
+az aks show --name $cluster --resource-group $rg --query 'agentPoolProfiles[0].maxPods'
+
+
+kubectl apply -f  azure-vote-all-in-one-redis.yaml
+kubectl get nodes
+kubectl get pods
+kubectl get deployments
+kubectl get services
+
+kubectl api-resources 
+
+az aks scale --name $cluster --resource-group $rg --node-count 1 

@@ -1,0 +1,10 @@
+## Variables
+RgName="Project42-RG"
+Location="westeurope"
+ClusterName="Project42-AKS"
+
+## Create a resource group
+az group create --name $RgName --location $Location
+
+## Create AKS cluster
+az aks create --name $ClusterName --resource-group $RgName --enable-addons monitoring,http_application_routing --kubernetes-version 1.15.4 
