@@ -1,0 +1,42 @@
+# subscription id
+subscription="c4483870-1b20-4f69-bc5e-2f26c8509efc"
+az account set --subscription $subscription
+
+
+# 'aks-preview' cli extension https://github.com/Azure/azure-cli-extensions/tree/master/src/aks-preview
+az extension list-available --query "[?name == 'aks-preview']"
+
+
+# get Kubernetes versions supported in AKS
+az aks get-versions --location westeurope --output table
+
+
+# Remove old aks service principal if exists  -- still valid?
+ll  ~/.azure/aksServicePrincipal.json
+cat ~/.azure/aksServicePrincipal.json
+rm  ~/.azure/aksServicePrincipal.json
+
+
+# view content of ~/.kube/config
+kubectl config view
+# show current context
+kubectl config current-context
+# use context
+kubectl config use-context docker-desktop
+# delete context
+kubectl config delete-context Cluster42
+# delete cluster
+kubectl config delete-cluster Cluster42
+# delete user
+kubectl config unset users.clusterUser_Kubernetes-RG_Cluster42
+
+
+
+# Kubernetes Dashboard
+# https://docs.microsoft.com/de-at/azure/aks/kubernetes-dashboard
+az aks browse --name $cluster --resource-group $rg
+
+# Dashboard is shown but limited access
+# Create (Kubernetes-)RBAC
+kubectl create clusterrolebinding kubernetes-dashboard --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
+az aks browse --name $cluster --resource-group $rg

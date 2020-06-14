@@ -1,0 +1,109 @@
+az login
+az account show
+tenantId=$(az account show --query tenantId --output tsv)
+
+cluster="Cluster42"
+location="westeurope"
+
+
+# Resource Groups
+# ----------------
+rg="Kubernetes-RG"
+rg2="$cluster-Nodes-RG"
+
+az group list --output table
+az group create --name $rg2 --location $location
+
+
+# Service Principal
+# ------------------
+sp=$(az ad sp create-for-rbac  --name $cluster --skip-assignment true)
+
+appId=$(echo $sp | jq .appId | tr -d '"')
+password=$(echo $sp | jq .password | tr -d '"')
+
+# --> Problem: sp taucht nicht in der Liste auf
+az ad sp list --query "[?appOwnerTenantId == '$tenantId'].{appDisplayName:appDisplayName,publisherName:publisherName,appId:appId}" --output table
+
+
+# SSH Keys
+# ---------
+ll ~/.ssh/id_rsa.pub
+
+
+# Create Cluster
+# ---------------
+az aks create --name $cluster \
+              --resource-group $rg \
+              --kubernetes-version 1.16.9 \
+              --enable-addons http_application_routing \
+              --service-principal $appId \
+              --client-secret $password \
+              --vm-set-type VirtualMachineScaleSets \
+              --node-count 2 \
+              --ssh-key-value ~/.ssh/id_rsa.pub \
+              --load-balancer-sku standard \
+              --enable-cluster-autoscaler \
+              --min-count 1 \
+              --max-count 5
+
+az aks list --output table
+
+
+# ToDo
+#   specify rg2
+#       az extension list-available --query "[?name == 'aks-preview']"
+#   
+#   network model 
+#       Basic (default)                 Advanced
+#       kubenet                         Azure CNI
+#       --network-plugin kubenet        --network-plugin azure
+#
+#   specify VM size
+#       --node-vm-size Standard_B2s 
+#
+#   specify DNS prefix
+#       --dns-name-prefix foo
+#
+#   only 1 instance but was --node-count 2 
+
+
+
+az aks show --name $cluster --resource-group $rg --query "{Fqdn:fqdn,Version:kubernetesVersion,VMSize:agentPoolProfiles[0].vmSize,AutoScaling:agentPoolProfiles[0].enableAutoScaling,Network:networkProfile.networkPlugin,RG2:nodeResourceGroup}" --output jsonc
+
+az resource list --resource-group $rg  --query "[].{Name:name,Type:type}" --output table
+az resource list --resource-group $rg2 --query "[].{Name:name,Type:type}" --output table
+
+az role assignment list --assignee $appId --resource-group $rg  --query "[].{principalName:principalName,principalType:principalType,Role:roleDefinitionName}" --output table
+az role assignment list --assignee $appId --resource-group $rg2 --query "[].{principalName:principalName,principalType:principalType,Role:roleDefinitionName}" --output table
+
+
+# Connect
+# --------
+az aks get-credentials --name $cluster --resource-group $rg
+
+kubectl config view
+kubectl config get-contexts
+kubectl config current-context
+
+kubectl cluster-info
+
+kubectl get nodes
+kubectl get pods
+kubectl get deployments
+kubectl get services
+
+ll ./azure-vote.yaml
+kubectl apply -f  azure-vote.yaml
+kubectl api-resources 
+
+az aks scale --name $cluster --resource-group $rg --node-count 1 
+
+
+
+
+
+
+# Clean up
+az group delete --name $rg --yes --no-wait
+az ad sp delete --id $appId
